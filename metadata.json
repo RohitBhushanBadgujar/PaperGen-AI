@@ -1,0 +1,6 @@
+{
+  "name": "PaperGen AI",
+  "description": "Professional question paper generator for teachers using PDF question bank extraction, customizable rubrics, multiple sets generation, and print/DOCX export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

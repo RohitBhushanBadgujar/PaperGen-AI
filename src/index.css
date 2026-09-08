@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    letter-spacing: -0.011em;
+    background-color: #F8FAFF;
+    color: #1F2937;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+.papergen-card {
+  background: #ffffff;
+  border: 1px solid #E2E8F0;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  transition: all 0.15s ease-in-out;
+}
+
+.papergen-card:hover {
+  border-color: #CBD5E1;
+}
+
+.papergen-btn-primary {
+  background-color: #5B8DEF;
+  color: #ffffff;
+  font-weight: 500;
+  border-radius: 0.50rem;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.papergen-btn-primary:hover {
+  background-color: #4A7CE8;
+  box-shadow: 0 1px 3px rgba(91, 141, 239, 0.25);
+}
+
+.papergen-btn-secondary {
+  background-color: #ffffff;
+  border: 1px solid #E2E8F0;
+  color: #1F2937;
+  font-weight: 500;
+  border-radius: 0.50rem;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.papergen-btn-secondary:hover {
+  background-color: #F8FAFF;
+  border-color: #CBD5E1;
+}
+
+.papergen-input {
+  background-color: #ffffff;
+  border: 1px solid #E2E8F0;
+  color: #1F2937;
+  border-radius: 0.50rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.papergen-input:focus {
+  outline: none;
+  border-color: #5B8DEF;
+  box-shadow: 0 0 0 2px rgba(91, 141, 239, 0.15);
+}
+
+@media print {
+  body {
+    background-color: white !important;
+    color: black !important;
+    font-size: 11pt;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .page-break {
+    page-break-before: always;
+  }
+}
+
+
