@@ -17,7 +17,7 @@ export const CreatePaperWizard: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12">
       {/* Wizard Step Progress Header */}
-      <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-2xs">
+      <div className="papergen-card p-3">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {steps.map((step) => {
             const isCompleted = step.id < currentStep;
@@ -36,28 +36,28 @@ export const CreatePaperWizard: React.FC = () => {
                 disabled={step.id > currentStep}
                 className={`p-3 rounded-lg flex items-center gap-3 text-left transition-all ${
                   isCurrent
-                    ? 'bg-[#F3F7FF] border border-blue-200 text-[#5B8DEF] shadow-2xs'
+                    ? 'bg-[#F9F1F3] border border-[#7A263A]/30 text-[#7A263A] shadow-2xs'
                     : isCompleted
-                    ? 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 cursor-pointer'
-                    : 'text-slate-400 opacity-60 cursor-not-allowed border border-slate-100 bg-slate-50/50'
+                    ? 'bg-[#FFFFFF] text-[#171717] hover:bg-[#FCFAF5] border border-[#DDD8CE] cursor-pointer'
+                    : 'text-[#68645D]/60 opacity-60 cursor-not-allowed border border-[#DDD8CE]/50 bg-[#FCFAF5]/50'
                 }`}
               >
                 <div
                   className={`w-7 h-7 rounded-md flex items-center justify-center font-semibold text-xs shrink-0 transition-colors ${
                     isCurrent
-                      ? 'bg-[#5B8DEF] text-white'
+                      ? 'bg-[#7A263A] text-white'
                       : isCompleted
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-200 text-slate-600'
+                      ? 'bg-[#536B57] text-white'
+                      : 'bg-[#DDD8CE] text-[#68645D]'
                   }`}
                 >
                   {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : `0${step.id}`}
                 </div>
                 <div className="overflow-hidden">
-                  <div className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-[#68645D]">
                     Step 0{step.id}
                   </div>
-                  <div className="text-xs font-semibold truncate text-slate-900">{step.label}</div>
+                  <div className="text-xs font-bold truncate text-[#171717]">{step.label}</div>
                 </div>
               </button>
             );
