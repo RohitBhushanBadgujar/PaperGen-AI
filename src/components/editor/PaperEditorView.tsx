@@ -29,6 +29,8 @@ import { exportAllSetsToZip } from '../../services/export/exportZip';
 export const PaperEditorView: React.FC = () => {
   const {
     generatedPaper,
+    pastPapers,
+    setGeneratedPaper,
     activeSetIndex,
     setActiveSetIndex,
     updatePaperQuestionText,
@@ -49,19 +51,19 @@ export const PaperEditorView: React.FC = () => {
   const [newQuestionText, setNewQuestionText] = useState('');
   const [isExportingZip, setIsExportingZip] = useState(false);
 
-  if (!generatedPaper || !generatedPaper.sets || generatedPaper.sets.length === 0) {
+  if ((!generatedPaper || !generatedPaper.sets || generatedPaper.sets.length === 0) && pastPapers.length === 0) {
     return (
       <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-xs max-w-2xl mx-auto space-y-4">
-        <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 mx-auto flex items-center justify-center">
+        <div className="w-12 h-12 rounded-2xl bg-[#7A263A]/10 text-[#7A263A] mx-auto flex items-center justify-center">
           <FileText className="w-6 h-6" />
         </div>
-        <h2 className="text-lg font-bold text-slate-900">No Generated Question Paper Yet</h2>
+        <h2 className="text-lg font-bold text-slate-900">No Generated Question Papers Yet</h2>
         <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-          Create your question paper by going through the 4-step wizard or load the sample Applied Electronics question banks.
+          Create your examination question paper by going through the Create Paper workflow.
         </p>
         <button
           onClick={() => setCurrentView('create-wizard')}
-          className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors inline-flex items-center gap-2"
+          className="px-6 py-2.5 bg-[#7A263A] hover:bg-[#651F30] text-white text-xs font-bold rounded-xl shadow-sm transition-colors inline-flex items-center gap-2"
         >
           <span>Start Creating Paper</span>
         </button>
@@ -69,8 +71,10 @@ export const PaperEditorView: React.FC = () => {
     );
   }
 
-  const activeSet = generatedPaper.sets[activeSetIndex] || generatedPaper.sets[0];
-  const hasMultipleSets = generatedPaper.sets.length > 1;
+  // If generatedPaper is not set but pastPapers has items, select the first one
+  const activePaper = generatedPaper || pastPapers[0];
+  const activeSet = activePaper.sets[activeSetIndex] || activePaper.sets[0];
+  const hasMultipleSets = activePaper.sets.length > 1;
 
   const handleStartEdit = (q: PaperQuestion) => {
     setEditingQuestionId(q.id);
@@ -93,15 +97,15 @@ export const PaperEditorView: React.FC = () => {
   };
 
   const handleDownloadActiveSetPdf = () => {
-    exportPaperToPdf(generatedPaper, activeSet);
+    exportPaperToPdf(activePaper, activeSet);
     showNotification(`Downloaded PDF for ${activeSet.setName}`, 'success');
   };
 
   const handleDownloadAllSetsZip = async () => {
     try {
       setIsExportingZip(true);
-      await exportAllSetsToZip(generatedPaper);
-      showNotification(`Downloaded all ${generatedPaper.sets.length} sets as ZIP archive!`, 'success');
+      await exportAllSetsToZip(activePaper);
+      showNotification(`Downloaded all ${activePaper.sets.length} sets as ZIP archive!`, 'success');
     } catch (e) {
       console.error(e);
       showNotification('Could not generate ZIP archive', 'error');
@@ -112,6 +116,93 @@ export const PaperEditorView: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-16">
+      {/* Generated Papers Repository List */}
+      {pastPapers.length > 0 && (
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
+          <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Generated Examination Papers</h2>
+              <p className="text-xs text-slate-500">Preview papers, open answer keys, or download PDF and Word copies.</p>
+            </div>
+            <span className="text-xs font-bold px-2.5 py-1 bg-[#7A263A]/10 text-[#7A263A] rounded-lg">
+              {pastPapers.length} Papers
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {pastPapers.map((paper) => {
+              const isSelected = activePaper?.id === paper.id;
+              return (
+                <div
+                  key={paper.id}
+                  className={`p-4 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                    isSelected
+                      ? 'bg-[#F9F1F3] border-[#7A263A]/40 shadow-2xs'
+                      : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-slate-900">
+                        {paper.examDetails.subjectName} – {paper.examDetails.examName}
+                      </span>
+                      {isSelected && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 bg-[#7A263A] text-white rounded-full">
+                          Viewing Active
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {paper.examDetails.collegeName} • {paper.sets.length} Sets • {paper.examDetails.totalMarks} Marks • {paper.createdAt ? new Date(paper.createdAt).toLocaleDateString() : 'Recent'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGeneratedPaper(paper);
+                        setActiveSetIndex(0);
+                      }}
+                      className="px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 shadow-2xs transition-colors"
+                    >
+                      Preview
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGeneratedPaper(paper);
+                        setCurrentView('answer-keys');
+                      }}
+                      className="px-3.5 py-1.5 bg-[#7A263A]/10 hover:bg-[#7A263A]/20 text-[#7A263A] text-xs font-semibold rounded-lg border border-[#7A263A]/30 shadow-2xs transition-colors"
+                    >
+                      Answer Key
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => exportPaperToPdf(paper, paper.sets[0])}
+                      className="px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 shadow-2xs transition-colors"
+                    >
+                      Download PDF
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => exportPaperToDocx(paper, paper.sets[0], false)}
+                      className="px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 shadow-2xs transition-colors"
+                    >
+                      Download Word
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Top Action Bar */}
       <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
         {/* Set Selector Tabs */}
@@ -119,21 +210,21 @@ export const PaperEditorView: React.FC = () => {
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
             Question Paper Sets:
           </span>
-          {generatedPaper.sets.map((set, idx) => (
+          {activePaper.sets.map((set, idx) => (
             <button
               key={set.setId}
               id={`btn-tab-set-${idx}`}
               onClick={() => setActiveSetIndex(idx)}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                 activeSetIndex === idx
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-[#7A263A] text-white shadow-xs'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
               }`}
             >
               <span>{set.setName}</span>
               <span
                 className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                  activeSetIndex === idx ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-600'
+                  activeSetIndex === idx ? 'bg-[#651F30] text-white' : 'bg-slate-200 text-slate-600'
                 }`}
               >
                 {set.sections.reduce((acc, s) => acc + s.questions.length, 0)} Qs
@@ -155,7 +246,7 @@ export const PaperEditorView: React.FC = () => {
 
           <button
             id="btn-export-docx"
-            onClick={() => exportPaperToDocx(generatedPaper, activeSet, false)}
+            onClick={() => exportPaperToDocx(activePaper, activeSet, false)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 transition-colors shadow-2xs"
           >
             <Download className="w-3.5 h-3.5 text-slate-500" />
@@ -175,7 +266,7 @@ export const PaperEditorView: React.FC = () => {
           <button
             id="btn-download-pdf-active-set"
             onClick={handleDownloadActiveSetPdf}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm hover:shadow transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#7A263A] hover:bg-[#651F30] shadow-sm hover:shadow transition-all"
           >
             <Download className="w-4 h-4" />
             <span>Download {activeSet.setName} (PDF)</span>
@@ -190,7 +281,7 @@ export const PaperEditorView: React.FC = () => {
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-colors disabled:opacity-50"
             >
               <Archive className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{isExportingZip ? 'Packaging ZIP...' : `Download All (${generatedPaper.sets.length}) Sets (ZIP)`}</span>
+              <span>{isExportingZip ? 'Packaging ZIP...' : `Download All (${activePaper.sets.length}) Sets (ZIP)`}</span>
             </button>
           )}
         </div>
@@ -206,18 +297,18 @@ export const PaperEditorView: React.FC = () => {
       >
         {/* Examination Formal Header Preview */}
         <div className="border-b-2 border-slate-900 pb-6 text-center space-y-1">
-          {generatedPaper.examDetails.collegeName && (
+          {activePaper.examDetails.collegeName && (
             <h2 className="text-xl font-bold uppercase tracking-wide text-slate-900 font-serif">
-              {generatedPaper.examDetails.collegeName}
+              {activePaper.examDetails.collegeName}
             </h2>
           )}
-          {generatedPaper.examDetails.department && (
+          {activePaper.examDetails.department && (
             <p className="text-xs font-semibold text-slate-700 font-serif">
-              {generatedPaper.examDetails.department}
+              {activePaper.examDetails.department}
             </p>
           )}
           <h1 className="text-base md:text-lg font-black uppercase tracking-wider text-slate-900 pt-1 font-serif">
-            {generatedPaper.examDetails.examName} — ({activeSet.setName.toUpperCase()})
+            {activePaper.examDetails.examName} — ({activeSet.setName.toUpperCase()})
           </h1>
 
           {/* Meta Info Bar */}
@@ -225,34 +316,36 @@ export const PaperEditorView: React.FC = () => {
             <div className="text-left space-y-1">
               <div>
                 <span className="font-bold">Subject: </span>
-                <span>{generatedPaper.examDetails.subjectName}</span>
-                {generatedPaper.examDetails.subjectCode && (
-                  <span> ({generatedPaper.examDetails.subjectCode})</span>
+                <span>{activePaper.examDetails.subjectName}</span>
+                {activePaper.examDetails.subjectCode && (
+                  <span> ({activePaper.examDetails.subjectCode})</span>
                 )}
               </div>
-              <div>
-                <span className="font-bold">Date: </span>
-                <span>{generatedPaper.examDetails.date || new Date().toLocaleDateString()}</span>
-              </div>
+              {activePaper.examDetails.date && (
+                <div>
+                  <span className="font-bold">Date: </span>
+                  <span>{activePaper.examDetails.date}</span>
+                </div>
+              )}
             </div>
             <div className="text-right space-y-1">
               <div>
                 <span className="font-bold">Time Duration: </span>
-                <span>{generatedPaper.examDetails.duration}</span>
+                <span>{activePaper.examDetails.duration}</span>
               </div>
               <div>
                 <span className="font-bold">Maximum Marks: </span>
-                <span className="font-bold text-blue-700">{generatedPaper.examDetails.totalMarks} Marks</span>
+                <span className="font-bold text-[#7A263A]">{activePaper.examDetails.totalMarks} Marks</span>
               </div>
             </div>
           </div>
 
           {/* Instructions */}
-          {generatedPaper.examDetails.instructions && generatedPaper.examDetails.instructions.length > 0 && (
+          {activePaper.examDetails.instructions && activePaper.examDetails.instructions.length > 0 && (
             <div className="text-left text-xs bg-slate-50 p-3 rounded-lg border border-slate-200 mt-3 font-sans">
               <span className="font-bold text-slate-800">Instructions for Candidates:</span>
               <ol className="list-decimal list-inside mt-1 space-y-0.5 text-slate-600">
-                {generatedPaper.examDetails.instructions.map((ins, i) => (
+                {activePaper.examDetails.instructions.map((ins, i) => (
                   <li key={i}>{ins}</li>
                 ))}
               </ol>
@@ -477,7 +570,7 @@ export const PaperEditorView: React.FC = () => {
       <PrintPreviewModal
         isOpen={showPrintModal}
         onClose={() => setShowPrintModal(false)}
-        paper={generatedPaper}
+        paper={activePaper}
         activeSet={activeSet}
       />
     </div>

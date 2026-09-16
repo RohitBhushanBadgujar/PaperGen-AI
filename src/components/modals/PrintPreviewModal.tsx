@@ -95,10 +95,12 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
                   <span>{paper.examDetails.subjectName}</span>
                   {paper.examDetails.subjectCode && <span> ({paper.examDetails.subjectCode})</span>}
                 </div>
+              {paper.examDetails.date && (
                 <div>
                   <span className="font-bold">Date: </span>
-                  <span>{paper.examDetails.date || new Date().toLocaleDateString()}</span>
+                  <span>{paper.examDetails.date}</span>
                 </div>
+              )}
               </div>
               <div className="text-right space-y-1">
                 <div>

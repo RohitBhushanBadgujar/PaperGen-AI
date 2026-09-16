@@ -1,5 +1,4 @@
-import { ExamDetails, RubricSection, QuestionBank, GeneratedPaper, GeneratedSet, PaperQuestion, BloomsLevel, QuestionItem } from '../../types';
-import { SAMPLE_BANKS } from '../../data/sampleQuestionBanks';
+import { ExamDetails, RubricSection, QuestionBank, GeneratedPaper, GeneratedSet, PaperQuestion, QuestionItem } from '../../types';
 
 // Helper to shuffle array using Fisher-Yates
 function shuffleArray<T>(array: T[]): T[] {
@@ -19,16 +18,6 @@ function getSectionQuestions(rubric: RubricSection, banks: Record<number, Questi
   const bank = banks[markTier];
   if (bank && bank.questions && bank.questions.length > 0) {
     return bank.questions;
-  }
-  const sample = SAMPLE_BANKS[markTier];
-  if (sample && sample.questions) {
-    return sample.questions.map((q, i) => ({
-      id: `sample_${markTier}_${i}`,
-      text: q.text,
-      marks: markTier,
-      bloomsLevel: q.bloomsLevel,
-      sourceBankId: 'sample',
-    }));
   }
   return [];
 }
@@ -101,9 +90,33 @@ export function generateExamPaper(
 ): { success: boolean; paper?: GeneratedPaper; warnings?: string[]; error?: string } {
   const warnings: string[] = [];
 
-  // Validate if all blueprint requirements have enough questions in respective question banks
+  // Check if any question bank exists or total questions available is 0
+  const totalLoadedBanks = Object.values(banks).filter(b => b.questions && b.questions.length > 0).length;
+  const totalPdfQuestions = rubrics.reduce((acc, r) => acc + (r.pdfQuestions?.length || 0), 0);
+  
+  if (totalLoadedBanks === 0 && totalPdfQuestions === 0) {
+    return {
+      success: false,
+      error: 'No Question Bank Found. Please upload a question bank PDF before generating the question paper.',
+    };
+  }
+
+  // Validate total attemptable marks against target total marks
+  const totalAttemptableMarks = rubrics.reduce((sum, r) => {
+    const q = r.questions !== undefined ? r.questions : (r.questionsRequired || 5);
+    const att = r.attemptAny !== undefined ? r.attemptAny : q;
+    return sum + (att * r.marksPerQuestion);
+  }, 0);
+
+  if (totalAttemptableMarks !== examDetails.totalMarks) {
+    return {
+      success: false,
+      error: `Paper structure mismatch. Target total marks is ${examDetails.totalMarks}, but current attemptable marks is ${totalAttemptableMarks}. Please adjust the paper structure.`,
+    };
+  }
+
+  // Validate if all section requirements have enough questions in respective question banks
   for (const rubric of rubrics) {
-    const markTier = rubric.marksPerQuestion;
     const allBankQuestions = getSectionQuestions(rubric, banks);
     const totalDisp = rubric.questions !== undefined ? rubric.questions : (rubric.questionsRequired || 5);
     const totalAttemptAny = rubric.attemptAny !== undefined ? rubric.attemptAny : totalDisp;
@@ -118,47 +131,31 @@ export function generateExamPaper(
     if (allBankQuestions.length === 0) {
       return {
         success: false,
-        error: `No questions available for section "${rubric.sectionName}". Please upload a question bank PDF or add questions first.`,
+        error: `No questions available for section "${rubric.sectionName}". Please upload a question bank PDF first.`,
       };
     }
 
-    let rows = rubric.blueprintRows && rubric.blueprintRows.length > 0
-      ? rubric.blueprintRows.map(r => ({ ...r }))
-      : [{ id: 'default', bloomsLevel: 'Understand' as BloomsLevel, questionsDisplayed: totalDisp }];
-
-    const sumRows = rows.reduce((acc, r) => acc + r.questionsDisplayed, 0);
-    if (sumRows !== totalDisp && rows.length > 0) {
-      rows[0].questionsDisplayed = Math.max(1, rows[0].questionsDisplayed + (totalDisp - sumRows));
-    }
-
-    for (const row of rows) {
-      const matchingQuestions = allBankQuestions.filter(q => q.bloomsLevel === row.bloomsLevel);
-      if (matchingQuestions.length < row.questionsDisplayed) {
-        return {
-          success: false,
-          error: `Insufficient questions for Bloom level "${row.bloomsLevel}" in section "${rubric.sectionName}". Required: ${row.questionsDisplayed}, Available: ${matchingQuestions.length}. Please upload a PDF or adjust Bloom requirements.`,
-        };
-      }
+    if (allBankQuestions.length < totalDisp) {
+      return {
+        success: false,
+        error: `Section "${rubric.sectionName}" requires ${totalDisp} questions, but only ${allBankQuestions.length} are available in the question bank.`,
+      };
     }
   }
 
   const numSets = Math.max(1, Math.min(config.numberOfSets || 1, 50));
   const sets: GeneratedSet[] = [];
 
-  // Repetition tracker per mark tier & Bloom level if reduceRepetition is enabled
-  const poolTracking: Record<string, { allQuestions: any[]; usedIndices: Set<number> }> = {};
+  // Repetition tracker per section if reduceRepetition is enabled
+  const poolTracking: Record<string, { allQuestions: QuestionItem[]; usedIndices: Set<number> }> = {};
 
   if (config.reduceRepetition) {
     for (const rubric of rubrics) {
       const allBankQuestions = getSectionQuestions(rubric, banks);
-      const bloomsLevels: BloomsLevel[] = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create'];
-      for (const level of bloomsLevels) {
-        const levelQs = allBankQuestions.filter(q => q.bloomsLevel === level);
-        poolTracking[`${rubric.id}_${level}`] = {
-          allQuestions: config.shuffleOrder === 'section' ? shuffleArray(levelQs) : [...levelQs],
-          usedIndices: new Set<number>(),
-        };
-      }
+      poolTracking[rubric.id] = {
+        allQuestions: config.shuffleOrder === 'section' ? shuffleArray(allBankQuestions) : [...allBankQuestions],
+        usedIndices: new Set<number>(),
+      };
     }
   }
 
@@ -173,74 +170,58 @@ export function generateExamPaper(
       const totalAttemptAny = rubric.attemptAny !== undefined ? rubric.attemptAny : totalDisp;
 
       let sectionQuestions: PaperQuestion[] = [];
+      let selectedRaw: QuestionItem[] = [];
 
-      let rows = rubric.blueprintRows && rubric.blueprintRows.length > 0
-        ? rubric.blueprintRows.map(r => ({ ...r }))
-        : [{ id: 'default', bloomsLevel: 'Understand' as BloomsLevel, questionsDisplayed: totalDisp }];
-
-      const sumRows = rows.reduce((acc, r) => acc + r.questionsDisplayed, 0);
-      if (sumRows !== totalDisp && rows.length > 0) {
-        rows[0].questionsDisplayed = Math.max(1, rows[0].questionsDisplayed + (totalDisp - sumRows));
+      if (config.reduceRepetition) {
+        const tracker = poolTracking[rubric.id] || { allQuestions: allBankQuestions, usedIndices: new Set<number>() };
+        let availableUnused: number[] = [];
+        for (let i = 0; i < tracker.allQuestions.length; i++) {
+          if (!tracker.usedIndices.has(i)) {
+            availableUnused.push(i);
+          }
+        }
+        if (availableUnused.length < totalDisp) {
+          tracker.usedIndices.clear();
+          availableUnused = Array.from({ length: tracker.allQuestions.length }, (_, i) => i);
+        }
+        const pickedIndices = (config.shuffleOrder === 'section' ? shuffleArray(availableUnused) : availableUnused).slice(0, totalDisp);
+        pickedIndices.forEach((idx) => tracker.usedIndices.add(idx));
+        selectedRaw = pickedIndices.map((idx) => tracker.allQuestions[idx]);
+      } else {
+        if (config.shuffleOrder === 'section') {
+          const shuffled = shuffleArray(allBankQuestions);
+          selectedRaw = shuffled.slice(0, totalDisp);
+        } else {
+          const offset = (setIdx * totalDisp) % Math.max(1, allBankQuestions.length);
+          const rotated = [...allBankQuestions.slice(offset), ...allBankQuestions.slice(0, offset)];
+          selectedRaw = rotated.slice(0, totalDisp);
+        }
       }
 
-      rows.forEach((row) => {
-        const level = row.bloomsLevel;
-        const requiredCount = row.questionsDisplayed;
-        const levelQuestions = allBankQuestions.filter(q => q.bloomsLevel === level);
-        let selectedRaw: any[] = [];
+      if (config.shuffleOrder === 'section') {
+        selectedRaw = shuffleArray(selectedRaw);
+      }
 
-        if (config.reduceRepetition) {
-          const key = `${rubric.id}_${level}`;
-          const tracker = poolTracking[key] || { allQuestions: levelQuestions, usedIndices: new Set<number>() };
-          let availableUnused: number[] = [];
-          for (let i = 0; i < tracker.allQuestions.length; i++) {
-            if (!tracker.usedIndices.has(i)) {
-              availableUnused.push(i);
-            }
-          }
-          if (availableUnused.length < requiredCount) {
-            tracker.usedIndices.clear();
-            availableUnused = Array.from({ length: tracker.allQuestions.length }, (_, i) => i);
-          }
-          const pickedIndices = (config.shuffleOrder === 'section' ? shuffleArray(availableUnused) : availableUnused).slice(0, requiredCount);
-          pickedIndices.forEach((idx) => tracker.usedIndices.add(idx));
-          selectedRaw = pickedIndices.map((idx) => tracker.allQuestions[idx]);
-        } else {
-          if (config.shuffleOrder === 'section') {
-            const shuffled = shuffleArray(levelQuestions);
-            selectedRaw = shuffled.slice(0, requiredCount);
-          } else {
-            const offset = (setIdx * requiredCount) % Math.max(1, levelQuestions.length);
-            const rotated = [...levelQuestions.slice(offset), ...levelQuestions.slice(0, offset)];
-            selectedRaw = rotated.slice(0, requiredCount);
-          }
+      selectedRaw.forEach((origQ) => {
+        const qNum = config.continuousNumbering ? runningQuestionNumber : sectionQuestions.length + 1;
+        const pq: PaperQuestion = {
+          id: `q_${setIdx}_${rubric.marksPerQuestion}_${origQ.id}_${Math.random().toString(36).substring(2, 6)}`,
+          sectionId: rubric.id,
+          questionNumber: qNum,
+          displayNumber: `Q${qNum}.`,
+          text: origQ.text,
+          marks: rubric.marksPerQuestion,
+          bloomsLevel: origQ.bloomsLevel || 'Understand',
+          co: origQ.co || 'CO1',
+          originalBankQuestionId: origQ.id,
+          answerKey: origQ.sampleAnswer || '',
+        };
+
+        if (config.continuousNumbering) {
+          runningQuestionNumber++;
         }
 
-        if (config.shuffleOrder === 'section') {
-          selectedRaw = shuffleArray(selectedRaw);
-        }
-
-        selectedRaw.forEach((origQ) => {
-          const qNum = config.continuousNumbering ? runningQuestionNumber : sectionQuestions.length + 1;
-          const pq: PaperQuestion = {
-            id: `q_${setIdx}_${rubric.marksPerQuestion}_${origQ.id}_${Math.random().toString(36).substring(2, 6)}`,
-            sectionId: rubric.id,
-            questionNumber: qNum,
-            displayNumber: `Q${qNum}.`,
-            text: origQ.text,
-            marks: rubric.marksPerQuestion,
-            bloomsLevel: origQ.bloomsLevel || level,
-            co: origQ.co || 'CO1',
-            originalBankQuestionId: origQ.id,
-            answerKey: origQ.sampleAnswer || '',
-          };
-
-          if (config.continuousNumbering) {
-            runningQuestionNumber++;
-          }
-
-          sectionQuestions.push(pq);
-        });
+        sectionQuestions.push(pq);
       });
 
       const instructionText = getSectionInstruction(totalDisp, totalAttemptAny);

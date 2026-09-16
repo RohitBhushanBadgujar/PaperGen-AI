@@ -24,21 +24,10 @@ export const Sidebar: React.FC = () => {
     { view: 'dashboard', label: 'Dashboard', icon: <FileText className="w-4 h-4" /> },
     { view: 'create-wizard', label: 'Create Paper', icon: <PlusCircle className="w-4 h-4 text-[#7A263A]" /> },
     {
-      view: 'banks',
-      label: 'Question Banks',
-      icon: <FolderOpen className="w-4 h-4" />,
-      badge: totalQuestions > 0 ? `${totalQuestions} Qs` : undefined,
-    },
-    {
       view: 'editor',
       label: 'Generated Papers',
       icon: <FileCheck2 className="w-4 h-4" />,
       badge: generatedPaper ? `${generatedPaper.sets.length} Sets` : undefined,
-    },
-    {
-      view: 'answer-keys',
-      label: 'Answer Keys',
-      icon: <KeyRound className="w-4 h-4" />,
     },
     { view: 'settings', label: 'Settings', icon: <Settings className="w-4 h-4" /> },
   ];

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Layers, UploadCloud, Sliders, CheckCircle2 } from 'lucide-react';
+import { BookOpen, Layers, Sliders, CheckCircle2, FileCheck2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { StepExamDetails } from './StepExamDetails';
 import { StepRubric } from './StepRubric';
@@ -10,8 +10,8 @@ export const CreatePaperWizard: React.FC = () => {
 
   const steps = [
     { id: 1, label: 'Exam Details', icon: <BookOpen className="w-4 h-4" /> },
-    { id: 2, label: 'Marking Scheme', icon: <Layers className="w-4 h-4" /> },
-    { id: 3, label: 'Generate Paper', icon: <Sliders className="w-4 h-4" /> },
+    { id: 2, label: 'Paper Structure', icon: <Layers className="w-4 h-4" /> },
+    { id: 3, label: 'Review & Generate', icon: <FileCheck2 className="w-4 h-4" /> },
   ];
 
   return (
@@ -34,7 +34,7 @@ export const CreatePaperWizard: React.FC = () => {
                   }
                 }}
                 disabled={step.id > currentStep}
-                className={`p-3 rounded-lg flex items-center gap-3 text-left transition-all ${
+                className={`p-2.5 rounded-lg flex items-center gap-2.5 text-left transition-all ${
                   isCurrent
                     ? 'bg-[#F9F1F3] border border-[#7A263A]/30 text-[#7A263A] shadow-2xs'
                     : isCompleted
@@ -43,7 +43,7 @@ export const CreatePaperWizard: React.FC = () => {
                 }`}
               >
                 <div
-                  className={`w-7 h-7 rounded-md flex items-center justify-center font-semibold text-xs shrink-0 transition-colors ${
+                  className={`w-6 h-6 rounded-md flex items-center justify-center font-semibold text-[11px] shrink-0 transition-colors ${
                     isCurrent
                       ? 'bg-[#7A263A] text-white'
                       : isCompleted
@@ -51,10 +51,10 @@ export const CreatePaperWizard: React.FC = () => {
                       : 'bg-[#DDD8CE] text-[#68645D]'
                   }`}
                 >
-                  {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : `0${step.id}`}
+                  {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : `0${step.id}`}
                 </div>
                 <div className="overflow-hidden">
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-[#68645D]">
+                  <div className="text-[9px] font-semibold uppercase tracking-wider text-[#68645D]">
                     Step 0{step.id}
                   </div>
                   <div className="text-xs font-bold truncate text-[#171717]">{step.label}</div>
@@ -76,7 +76,11 @@ export const CreatePaperWizard: React.FC = () => {
         >
           {currentStep === 1 && <StepExamDetails onNext={() => setCurrentStep(2)} />}
           {currentStep === 2 && (
-            <StepRubric onNext={() => setCurrentStep(3)} onBack={() => setCurrentStep(1)} />
+            <StepRubric
+              onNext={() => setCurrentStep(3)}
+              onBack={() => setCurrentStep(1)}
+              stepMode="structure"
+            />
           )}
           {currentStep === 3 && <StepGenerateSettings onBack={() => setCurrentStep(2)} />}
         </motion.div>

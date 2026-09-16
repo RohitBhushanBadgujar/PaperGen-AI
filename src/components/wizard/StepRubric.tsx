@@ -5,11 +5,13 @@ import { BloomsLevel, RubricSection, QuestionItem, QuestionBank } from '../../ty
 import { extractQuestionsFromPDF } from '../../services/pdf/pdfExtractor';
 import { InspectBankModal } from '../modals/InspectBankModal';
 
-export const StepRubric: React.FC<{ onNext: () => void; onBack: () => void }> = ({
+export const StepRubric: React.FC<{ onNext: () => void; onBack: () => void; stepMode?: 'structure' | 'blooms' }> = ({
   onNext,
   onBack,
+  stepMode = 'structure',
 }) => {
   const {
+    examDetails,
     rubrics,
     setRubrics,
     addRubricSection,
@@ -203,9 +205,15 @@ export const StepRubric: React.FC<{ onNext: () => void; onBack: () => void }> = 
     }
   };
 
+  const isMarksMismatch = totalAttemptableMarks !== examDetails.totalMarks;
+
   const handleContinue = () => {
     if (rubrics.length === 0) {
       showNotification('Please add at least one section in the blueprint', 'error');
+      return;
+    }
+    if (totalAttemptableMarks !== examDetails.totalMarks) {
+      showNotification(`Paper structure mismatch! Target Total Marks is ${examDetails.totalMarks}, but current attemptable marks is ${totalAttemptableMarks}.`, 'error');
       return;
     }
     onNext();
@@ -218,10 +226,14 @@ export const StepRubric: React.FC<{ onNext: () => void; onBack: () => void }> = 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
           <div>
             <h2 className="text-base font-bold text-slate-900">
-              Step 2 — Paper Blueprint & Bloom's Taxonomy Structure
+              {stepMode === 'blooms'
+                ? "Step 03 — Bloom's Taxonomy Distribution & Cognitive Levels"
+                : 'Step 02 — Paper Structure & Marking Scheme'}
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Define question sections, Bloom's cognitive levels, and student choice rules ("Attempt Any").
+              {stepMode === 'blooms'
+                ? "Configure and review cognitive distribution (Remember, Understand, Apply, Analyze, Evaluate, Create) across section blueprints."
+                : 'Define question sections, marks per question, displayed questions, and student choice rules ("Attempt Any").'}
             </p>
           </div>
 
@@ -248,16 +260,21 @@ export const StepRubric: React.FC<{ onNext: () => void; onBack: () => void }> = 
         </div>
 
         {/* Live Summary Bar (Displayed vs Attemptable Marks & Questions) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200/80">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200/80">
+          <div className="space-y-0.5">
+            <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Target Total Marks</div>
+            <div className="text-lg font-black text-slate-900">{examDetails.totalMarks} Marks</div>
+            <div className="text-[10px] text-slate-400">Set in Exam Details</div>
+          </div>
+          <div className="space-y-0.5">
+            <div className="text-[10px] uppercase font-bold tracking-wider text-blue-600">Max Attemptable Marks</div>
+            <div className={`text-lg font-black ${isMarksMismatch ? 'text-amber-600' : 'text-blue-700'}`}>{totalAttemptableMarks} Marks</div>
+            <div className="text-[10px] text-blue-500">Counted for grading</div>
+          </div>
           <div className="space-y-0.5">
             <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Displayed Marks</div>
             <div className="text-lg font-black text-slate-900">{totalDisplayedMarks} Marks</div>
             <div className="text-[10px] text-slate-400">Total visible on paper</div>
-          </div>
-          <div className="space-y-0.5">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-blue-600">Max Attemptable Marks</div>
-            <div className="text-lg font-black text-blue-700">{totalAttemptableMarks} Marks</div>
-            <div className="text-[10px] text-blue-500">Counted for grading</div>
           </div>
           <div className="space-y-0.5">
             <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Questions Displayed</div>
@@ -270,6 +287,19 @@ export const StepRubric: React.FC<{ onNext: () => void; onBack: () => void }> = 
             <div className="text-[10px] text-emerald-500">Student answers required</div>
           </div>
         </div>
+
+        {/* Mismatch Warning Banner */}
+        {isMarksMismatch && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-1 text-xs text-amber-900">
+            <div className="flex items-center gap-1.5 font-bold text-sm">
+              <span>⚠ Paper structure mismatch</span>
+            </div>
+            <p className="leading-relaxed">
+              Target Total Marks: <strong>{examDetails.totalMarks}</strong> | Current Attemptable Marks: <strong>{totalAttemptableMarks}</strong>.
+              {totalAttemptableMarks > examDetails.totalMarks ? ` Your paper structure exceeds the target by ${totalAttemptableMarks - examDetails.totalMarks} marks.` : ` Your paper structure is short by ${examDetails.totalMarks - totalAttemptableMarks} marks.`} Please adjust the sections before proceeding.
+            </p>
+          </div>
+        )}
 
         {/* Quick Add Section Bar */}
         <div className="p-4 bg-white rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-4">
@@ -622,16 +652,17 @@ export const StepRubric: React.FC<{ onNext: () => void; onBack: () => void }> = 
           onClick={onBack}
           className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition-colors flex items-center gap-2"
         >
-          <span>← Back to Exam Details</span>
+          <span>{stepMode === 'blooms' ? '← Back to Paper Structure' : '← Back to Exam Details'}</span>
         </button>
 
         <button
           type="button"
-          id="btn-step2-next"
+          id="btn-step-rubric-next"
+          disabled={isMarksMismatch}
           onClick={handleContinue}
-          className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-2"
+          className="px-6 py-2.5 bg-[#7A263A] hover:bg-[#651F30] text-white text-sm font-bold rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span>Continue to Step 3: Generate Paper →</span>
+          <span>{stepMode === 'blooms' ? "Continue to Review & Generate →" : "Continue to Review & Generate →"}</span>
         </button>
       </div>
 

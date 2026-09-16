@@ -184,17 +184,7 @@ export const PaperGenProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     sessionStorage.setItem('pg_past_papers', JSON.stringify(pastPapers));
   }, [pastPapers]);
 
-  // Recalculate total marks when rubrics change (attemptable / counted marks)
-  useEffect(() => {
-    const calculatedTotal = rubrics.reduce((sum, r) => {
-      const q = r.questions !== undefined ? r.questions : (r.questionsRequired || 5);
-      const att = r.attemptAny !== undefined ? r.attemptAny : q;
-      return sum + (att * r.marksPerQuestion);
-    }, 0);
-    if (calculatedTotal > 0 && calculatedTotal !== examDetails.totalMarks) {
-      setExamDetails(prev => ({ ...prev, totalMarks: calculatedTotal }));
-    }
-  }, [rubrics]);
+
 
   const updateExamDetails = (details: Partial<ExamDetails>) => {
     setExamDetails(prev => ({ ...prev, ...details }));

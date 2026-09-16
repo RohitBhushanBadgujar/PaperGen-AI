@@ -119,10 +119,12 @@ export function generatePaperPdfBlob(paper: GeneratedPaper, set: GeneratedSet): 
   doc.text(sanitizeForPdf(paper.examDetails.duration || 'N/A'), pageWidth - marginX, y, { align: 'right' });
   y += 5;
 
-  doc.setFont('times', 'bold');
-  doc.text('Date: ', marginX, y, { align: 'left' });
-  doc.setFont('times', 'normal');
-  doc.text(sanitizeForPdf(paper.examDetails.date || new Date().toLocaleDateString()), marginX + 16, y, { align: 'left' });
+  if (paper.examDetails.date) {
+    doc.setFont('times', 'bold');
+    doc.text('Date: ', marginX, y, { align: 'left' });
+    doc.setFont('times', 'normal');
+    doc.text(sanitizeForPdf(paper.examDetails.date), marginX + 16, y, { align: 'left' });
+  }
 
   doc.setFont('times', 'bold');
   doc.text('Max Marks: ', pageWidth - marginX - 45, y, { align: 'left' });

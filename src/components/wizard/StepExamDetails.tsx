@@ -135,7 +135,7 @@ export const StepExamDetails: React.FC<{ onNext: () => void }> = ({ onNext }) =>
 
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">
-              Exam Date
+              Exam Date <span className="text-slate-400 font-normal">(Optional)</span>
             </label>
             <div className="relative">
               <Calendar className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -241,7 +241,7 @@ export const StepExamDetails: React.FC<{ onNext: () => void }> = ({ onNext }) =>
           id="btn-step1-next"
           className="px-5 py-2.5 papergen-btn-primary text-sm flex items-center gap-2 shadow-2xs"
         >
-          <span>Continue to Marking Scheme →</span>
+          <span>Continue to Question Banks →</span>
         </button>
       </div>
     </form>

@@ -81,12 +81,14 @@ export async function exportPaperToDocx(paper: GeneratedPaper, activeSet?: Gener
                     ...(paper.examDetails.subjectCode ? [new TextRun({ text: ` (${paper.examDetails.subjectCode})`, font: 'Times New Roman' })] : []),
                   ],
                 }),
-                new Paragraph({
-                  children: [
-                    new TextRun({ text: 'Date: ', bold: true, font: 'Times New Roman' }),
-                    new TextRun({ text: paper.examDetails.date || new Date().toLocaleDateString(), font: 'Times New Roman' }),
-                  ],
-                }),
+                ...(paper.examDetails.date ? [
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: 'Date: ', bold: true, font: 'Times New Roman' }),
+                      new TextRun({ text: paper.examDetails.date, font: 'Times New Roman' }),
+                    ],
+                  })
+                ] : []),
               ],
             }),
             new TableCell({
